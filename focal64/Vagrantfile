@@ -4,18 +4,28 @@ $script_mysql = <<-SCRIPT
   mysql -e "create user 'phpuser'@'%' identified by 'pass';"
 SCRIPT
 
-Vagrant.configure("2") do |config|
+Vagrant.configure("2") do |config|  
   config.vm.box = "ubuntu/focal64"
-  config.vm.network "forwarded_port", guest: 80, host: 8089
+  
   #config.vm.network "private_network", ip: "192.168.56.0" 
-  config.vm.network "public_network", ip: "172.16.31.43"
-  config.vm.provision "shell", 
-    inline: "cat /configs/shh-keys.pub >> .ssh/authorized_keys"
-  config.vm.provision "shell", inline: $script_mysql
-  config.vm.provision "shell", 
-    inline: "cat /configs/mysqld.cnf > /etc/mysql/mysql.conf.d/mysqld.cnf"
-  config.vm.provision "shell",
-    inline: "service restart mysql"
+  
+ 
+  config.vm.define "mysqldb" do |mysql|
+
+    mysql.vm.network "public_network", ip: "172.16.31.43"
+    mysql.vm.provision "shell", 
+      inline: "cat /configs/shh-keys.pub >> .ssh/authorized_keys"
+    mysql.vm.provision "shell", inline: $script_mysql
+    mysql.vm.provision "shell", 
+      inline: "cat /configs/mysqld.cnf > /etc/mysql/mysql.conf.d/mysqld.cnf"
+    mysql.vm.provision "shell",
+      inline: "service mysql restart"
+  end
+  
+  config.vm.define "phpweb" do |phpweb|
+    phpweb.vm.network "forwarded_port", guest: 80, host: 8069
+    phpweb.vm.network "public_network", ip: "172.16.31.44"
+  end
   
   config.vm.synced_folder "./configs", "/configs"
   config.vm.synced_folder ".", "/vagrant", disabled: true
