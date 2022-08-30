@@ -20,13 +20,37 @@ Vagrant.configure("2") do |config|
       inline: "cat /configs/mysqld.cnf > /etc/mysql/mysql.conf.d/mysqld.cnf"
     mysql.vm.provision "shell",
       inline: "service mysql restart"
-  end
+    mysql.vm.synced_folder "./configs", "/configs"
+    mysql.vm.synced_folder ".", "/vagrant", disabled: true
+  
+    end
   
   config.vm.define "phpweb" do |phpweb|
-    phpweb.vm.network "forwarded_port", guest: 80, host: 8069
+    
+    phpweb.vm.network "forwarded_port", guest: 8888, host: 8888
     phpweb.vm.network "public_network", ip: "172.16.31.44"
-  end
+    
+    phpweb.vm.provision "shell", 
+    inline: "apt-get update && apt-get install -y puppet"
+    
+    phpweb.vm.provision "puppet" do |puppet|
+      puppet.manifests_path = "./configs/manifests"
+      puppet.manifest_file = "phpweb.pp"
+      end
+    end
   
-  config.vm.synced_folder "./configs", "/configs"
-  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.define "mysqlserver" do |mysqlserver|
+    mysqlserver.vm.network "public_network", ip: "172.16.31.45"
+    mysqlserver.vm.provision "shell", 
+      inline: "cat vagrant/configs/shh-keys.pub >> .ssh/authorized_keys"
+  end
+
+  config.vm.define "ansible" do |ansible|
+    ansible.vm.network "public_network", ip: "172.16.31.46"
+    ansible.vm.provision "shell", 
+      inline: "apt-get update && \
+      apt-get install -y software-properties-common && \
+      add-apt-repository --yes --update ppa:ansible/ansible && \
+      apt-get install -y ansible"
+  end
 end
