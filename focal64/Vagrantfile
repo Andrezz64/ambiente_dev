@@ -42,12 +42,17 @@ Vagrant.configure("2") do |config|
   config.vm.define "mysqlserver" do |mysqlserver|
     mysqlserver.vm.network "public_network", ip: "172.16.31.45"
     mysqlserver.vm.provision "shell", 
-      inline: "cat vagrant/configs/shh-keys.pub >> .ssh/authorized_keys"
+      inline: "cat /vagrant/configs/shh-keys.pub >> .ssh/authorized_keys"
   end
 
   config.vm.define "ansible" do |ansible|
     ansible.vm.network "public_network", ip: "172.16.31.46"
-    ansible.vm.provision "shell", 
+    
+    ansible.vm.provision "shell",
+      inline: "cp /vagrant/shh-keys /home/vagrant && \
+      chmod 600 /home/vagrant/shh-keys && \
+      chown vagrant:vagrant /home/vagrant/shh-keys"  # Verificar Amanhã (31/08/2022) pois o Ansible não está conseguindo acessar a mysqlserver por ssh.
+    ansible.vm.provision"shell", 
       inline: "apt-get update && \
       apt-get install -y software-properties-common && \
       add-apt-repository --yes --update ppa:ansible/ansible && \
